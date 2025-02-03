@@ -4,7 +4,8 @@ import time
 from functools import partial
 from uuid import uuid4
 
-from tqdm.autonotebook import tqdm, trange
+# from tqdm.autonotebook import tqdm, trange
+from tqdm import tqdm, trange
 import numpy as np
 from datasets import Dataset as HfDataset
 import datasets as hf_datasets

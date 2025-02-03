@@ -21,11 +21,17 @@ Since for ML-applications the main metric we care about is the number of datapoi
 The performance using huggingfaces Arrow based dataset abstraction becomes realy bad for datapointa containing more than ~1000 floating point numbers. This will remain also when setting the feature type to an appropriate format like `Array2D`. Probably the strength of the format only comes to shine for datasets with a much larger number of datapoints which have not big values like multiple images.
 
 ### Dell Laptop
-![Benchmark Results](doc/loading_laptop_rows_per_second.png)
+![Benchmark Results Loading Dell Laptop](doc/loading_laptop_rows_per_second.png)
 
-![Benchmark Results](doc/loading_laptop_rows_per_second2.png)
+![Benchmark Results Loading Dell Laptop](doc/loading_laptop_rows_per_second2.png)
+
+### Workstation
 
 ### Effect of DataLoader
+To benchmark the effect of the DataLoader we use a single dataset with 1000 datapoints and 1_000_000 floating point numbers per datapoint.
+Otherwise there are just to many possible combinations of parameters to consider.
+For other dataset sizes you should run the benchmark again to test te effects of the DataLoader.
+
 On a Laptop the usefullness of the Dataloader is limited since we cannot utilize multiple workers as this results in frequent crashes.
 
 ## Writing

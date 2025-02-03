@@ -3,8 +3,9 @@ import socket
 import time
 from datetime import datetime
 
+# from tqdm.autonotebook import tqdm, trange
+from tqdm import tqdm, trange
 from torch.utils.data import DataLoader
-from tqdm.autonotebook import tqdm, trange
 import numpy as np
 
 from dataset_benchmark.datasets import BenchmarkDataset

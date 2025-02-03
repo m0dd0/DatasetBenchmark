@@ -13,7 +13,7 @@ setup(
         "datasets",
         "h5py",
     ],
-    extras_require={"dev": ["black", "ipykernel"]},
+    extras_require={"dev": ["black", "ipykernel", "ipywdigets"]},
     entry_points={
         "console_scripts": [
             # Add command-line scripts here
