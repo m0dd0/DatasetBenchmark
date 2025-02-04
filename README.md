@@ -13,6 +13,20 @@ Another assumoption is that the number of columns has no significant influence o
 Also the format of the data is assumed to have no effect on the loading time.
 Thus it is asssumed that only the number of bytes per datapoint has an effect on the loading time.
 
+## Bringing the values into perspective
+A HD-image has a size of 1920x1080x3=6.220.800 values.
+The benchmark assumes 8 byte floating point values.
+However images can also be stored as 1 byte integer values (0-255).
+This would be equivalent to 777.600 floating point values.
+Reducing the resolution of the images can, obviously, reduce the number of values drastically.
+
+| Size of Image | Number of Images | Number of Values | Equivalent For Integer Values (/8) |
+|---------------|------------------|------------------|------------------------------------|
+| 480x640       | 1                | 921.600          | 115.200                            |
+| 480x640       | 4                | 3.6686.400       | 460.800                            |
+| 1920x1080     | 1                | 6.220.800        | 777.600                            |
+| 1920x1080     | 4                | 24.883.200       | 3.110.400                          |
+
 ## Dataloading Results
 This benchmark focusses on loading a number of individual rows from a dataset.
 For some formates there might be the option to load chunks resulting in a significant speedup but this is not considered in this benchmark as for random access chunking can no longer be used.
@@ -31,6 +45,8 @@ The performance using huggingfaces Arrow based dataset abstraction becomes realy
 ### Workstation
 
 ![Benchmark Results Loading Workstation](doc/loading_workstation_rows_per_second.png)
+
+![Benchmark Results Loading Workstation](doc/loading_workstation_rows_per_second2.png)
 
 ### Effect of DataLoader
 To benchmark the effect of the DataLoader we use a single dataset with 1000 datapoints and 1_000_000 floating point numbers per datapoint.
