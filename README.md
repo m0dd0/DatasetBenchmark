@@ -55,6 +55,22 @@ For other dataset sizes you should run the benchmark again to test te effects of
 
 On a Laptop the usefullness of the Dataloader is limited since we cannot utilize multiple workers as this results in frequent crashes.
 
+In general the increasing the number of workers is beneficial up to a certain point. After that the overhead of managing the workers becomes to big and the performance decreases again.
+
+For the batch size the performance is roughly constant over a wide range of batch sizes. Only for very small batch sizes the performance decreases. 
+
+Shufflin seems to have an neglecable effect on the performance.
+The `pin_memory` option seems can improve the performance significantly over all ranges of batch sizes and number of workers.
+
+Interstingly using a Dataloader for loading a `HDF5` file is slower than loading the data without a Dataloader.
+This might be due to problems with multiprocessing and the HDF5 file format. However even for `num_workers=0` the Dataloader is slower than loading the data without a Dataloader.
+
+
+
+![Benchmark Results Batched Loading](doc/batch_loading_workstation_rows_per_second_batch_size.png)
+
+![Benchmark Results Batched Loading](doc/batch_loading_workstation_rows_per_second_num_workers.png)
+
 ## Writing Results
 While the formats in this benchmark focus more on fast reading since they are used for ML-applications, writing is also considered.
 Writing speeds can especially become important when we record data robot data etc in real time.

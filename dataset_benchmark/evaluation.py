@@ -1,12 +1,14 @@
-from typing import Type, List, TypedDict, Dict
+from typing import Type, List, TypedDict, Dict, Tuple
 import socket
 import time
 from datetime import datetime
+import sys
 
 # from tqdm.autonotebook import tqdm, trange
 from tqdm import tqdm, trange
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 import numpy as np
+import jaxtyping as jt
 
 from dataset_benchmark.datasets import BenchmarkDataset
 
@@ -27,7 +29,7 @@ ReadBenchmarkDatapoint = TypedDict(
 )
 
 
-def evaluate_plain_loading(
+def benchmark_plain_loading(
     dataset_classes: List[Type[BenchmarkDataset]],
     n_rows: List[int],
     n_values_per_row: List[int],
@@ -85,7 +87,7 @@ def evaluate_plain_loading(
     return datapoints
 
 
-def evaluate_batched_loading(
+def benchmark_batched_loading(
     dataset_classes: List[Type[BenchmarkDataset]],
     n_rows: int,
     n_values_per_row: int,
@@ -97,13 +99,14 @@ def evaluate_batched_loading(
     max_dataset_size: int = 100_000_000_000,
     n_repeats: int = 3,
     dataset_init_kwargs: List[Dict] = None,
-) -> List[ReadBenchmarkDatapoint]:
+) -> Tuple[List[ReadBenchmarkDatapoint], jt.Float[np.ndarray, "n_datasets n_repeats"]]:
     dataset_init_kwargs = dataset_init_kwargs or [{} for _ in dataset_classes]
 
     if n_rows * n_values_per_row * 8 > max_dataset_size:
         raise ValueError("Dataset too large")
 
     datapoints = []
+    baseline_times = []
 
     for i_dataset_class, _dataset_class in enumerate(
         tqdm(dataset_classes, desc="dataset_class", leave=False)
@@ -111,6 +114,15 @@ def evaluate_batched_loading(
         dataset = _dataset_class(
             n_rows, n_values_per_row, **dataset_init_kwargs[i_dataset_class]
         )
+
+        times = []
+        for _ in trange(n_repeats, desc="repeats", leave=False):
+            start = time.time()
+            for i in tqdm(range(len(dataset)), desc="baseline", leave=False):
+                _ = dataset[i]
+            end = time.time()
+            times.append(end - start)
+        baseline_times.append(times)
 
         for _batch_size in tqdm(batch_sizes, desc="batch_size", leave=False):
             for _n_dataloader_workers in tqdm(
@@ -156,7 +168,7 @@ def evaluate_batched_loading(
 
         dataset.delete()
 
-    return datapoints
+    return datapoints, np.array(baseline_times)
 
 
 # def save_results(datapoints: List[BenchmarkDatapoint], prefix: str = "results"):
@@ -172,3 +184,71 @@ def evaluate_batched_loading(
 #     else:
 #         results_path.parent.mkdir(parents=True, exist_ok=True)
 #         df.to_csv(results_path, index=False)
+
+
+def evaluate_batched_loading(
+    datasets: List[Dataset],
+    shuffle: List[bool],
+    batch_sizes: List[int],
+    n_dataloader_workers: List[int],
+    dataloder_pin_memory: List[bool],
+    max_batch_size: int = 4_000_000_000,
+    n_repeats: int = 3,
+) -> Tuple[List[ReadBenchmarkDatapoint], jt.Float[np.ndarray, "n_datasets n_repeats"]]:
+
+    datapoints = []
+    baseline_times = []
+
+    for dataset in tqdm(datasets, desc="datasets", leave=False):
+        estimated_row_size = sys.getsizeof(dataset[0])
+
+        times = []
+        for _ in trange(n_repeats, desc="repeats", leave=False):
+            start = time.time()
+            for i in tqdm(range(len(dataset)), desc="baseline", leave=False):
+                _ = dataset[i]
+            end = time.time()
+        baseline_times.append(times)
+
+        for _batch_size in tqdm(batch_sizes, desc="batch_size", leave=False):
+            for _n_dataloader_workers in tqdm(
+                n_dataloader_workers, desc="n_dataloader_workers", leave=False
+            ):
+                for _dataloder_pin_memory in tqdm(
+                    dataloder_pin_memory, desc="dataloder_pin_memory", leave=False
+                ):
+                    for _shuffle in tqdm(shuffle, desc="shuffle", leave=False):
+
+                        if _batch_size * estimated_row_size > max_batch_size:
+                            continue
+
+                        for _ in trange(n_repeats, desc="repeats", leave=False):
+                            dataloader = DataLoader(
+                                dataset,
+                                batch_size=_batch_size,
+                                shuffle=_shuffle,
+                                num_workers=_n_dataloader_workers,
+                                pin_memory=_dataloder_pin_memory,
+                            )
+
+                            start = time.time()
+                            for batch in tqdm(
+                                dataloader, desc="reading batches", leave=False
+                            ):
+                                pass
+                            end = time.time()
+
+                            datapoints.append(
+                                {
+                                    "shuffle": _shuffle,
+                                    "batch_size": _batch_size,
+                                    "n_dataloader_workers": _n_dataloader_workers,
+                                    "dataloder_pin_memory": _dataloder_pin_memory,
+                                    "time": end - start,
+                                    "date": datetime.now().timestamp(),
+                                    "computer": socket.gethostname(),
+                                    "dataset_type": dataset.__class__.__name__,
+                                }
+                            )
+
+    return datapoints, np.array(baseline_times)
