@@ -3,6 +3,7 @@ from pathlib import Path
 import time
 from functools import partial
 from uuid import uuid4
+import pickle
 
 # from tqdm.autonotebook import tqdm, trange
 from tqdm import tqdm, trange
@@ -154,3 +155,38 @@ class Hdf5BenchmarkDatset(BenchmarkDataset, TorchDataset):
     def delete(self):
         self.file.close()
         self.file_path.unlink()
+
+
+class PickleBenchmarkDataset(BenchmarkDataset, TorchDataset):
+    def __init__(self, n_rows: int, n_values_per_row: int):
+        self.target_dir = Path(__file__).parent.parent / "data" / "pickle_temp"
+        self.target_dir.mkdir(parents=True, exist_ok=True)
+
+        for i in trange(n_rows, desc="Creating pickle dataset", leave=False):
+            with open(self.target_dir / f"{i}.pickle", "wb") as f:
+                pickle.dump(
+                    {
+                        "column1": np.random.rand(n_values_per_row),
+                        "column2": np.random.rand(),
+                    },
+                    f,
+                )
+
+        self.files = list(self.target_dir.glob("*.pickle"))
+
+    def __len__(self) -> int:
+        return len(self.files)
+
+    def __getitem__(self, idx: int):
+        with open(self.files[idx], "rb") as f:
+            return pickle.load(f)
+
+    def delete(self):
+        for f in tqdm(self.files, desc="Deleting pickle dataset", leave=False):
+            # try for 5 seconds to delete the file
+            for _ in range(5):
+                try:
+                    f.unlink()
+                    break
+                except Exception:
+                    time.sleep(1)
